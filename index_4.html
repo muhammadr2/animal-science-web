@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SocioTernak — Smart Livestock Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --emerald:#059669;--emerald-d:#047857;--emerald-l:#ecfdf5;
+    --slate9:#0f172a;--slate7:#334155;--slate5:#64748b;--slate3:#cbd5e1;
+    --slate1:#f1f5f9;--bg:#f8fafc;--amber:#d97706;--amber-l:#fffbeb;
+    --red:#dc2626;--red-l:#fef2f2;--sky:#0ea5e9;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--slate7);line-height:1.5}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+  .mono{font-family:var(--mono)}
+  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--slate1)}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:10px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .mark{width:38px;height:38px;border-radius:12px;background:var(--emerald);display:grid;place-items:center;color:#fff}
+  .logo b{font-size:17px;color:var(--slate9);letter-spacing:-.02em}
+  .logo small{display:block;font-family:var(--mono);font-size:10px;color:var(--emerald);text-transform:uppercase;letter-spacing:.18em}
+  .mode{font-family:var(--mono);font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.1em}
+  .mode.demo{background:var(--amber-l);color:var(--amber)} .mode.live{background:var(--emerald-l);color:var(--emerald-d)}
+  nav{display:flex;gap:4px;overflow-x:auto}
+  .tab{display:flex;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;font:inherit;font-size:14px;font-weight:600;color:var(--slate5);padding:8px 12px;border-radius:9px;white-space:nowrap;transition:.15s}
+  .tab:hover{background:var(--slate1)} .tab.active{background:var(--emerald);color:#fff}
+  main{padding:28px 0 8px}
+  section.page{display:none;animation:fade .25s} section.page.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(30px,6vw,46px);line-height:1.05;letter-spacing:-.03em;color:var(--slate9);font-weight:800}
+  h2{font-size:24px;color:var(--slate9);letter-spacing:-.02em;font-weight:800}
+  h3{font-size:16px;color:var(--slate9);font-weight:700}
+  .muted{color:var(--slate5)}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--emerald-l);color:var(--emerald-d);font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px}
+  .card{background:#fff;border:1px solid var(--slate1);border-radius:18px;padding:20px}
+  .grid{display:grid;gap:16px}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:inherit;font-weight:700;padding:13px 20px;border-radius:12px;transition:.15s}
+  .btn-primary{background:var(--emerald);color:#fff}.btn-primary:hover{background:var(--emerald-d)}
+  .btn-ghost{background:#fff;border:1px solid var(--slate3);color:var(--slate7)}.btn-ghost:hover{background:var(--slate1)}
+  .btn-sm{padding:8px 14px;font-size:13px;border-radius:10px}
+  .hero{display:grid;gap:28px;align-items:center}
+  @media(min-width:820px){.hero{grid-template-columns:1fr 1fr}}
+  .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;text-align:center}
+  .kv div{background:var(--slate1);border-radius:11px;padding:10px 6px}
+  .kv .n{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--slate9)}
+  .kv .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--slate5)}
+  .features{grid-template-columns:1fr;margin-top:36px}
+  @media(min-width:720px){.features{grid-template-columns:repeat(3,1fr)}}
+  .feat .ic{width:44px;height:44px;border-radius:12px;background:var(--emerald-l);color:var(--emerald-d);display:grid;place-items:center}
+  .feat h3{margin-top:14px}.feat p{margin-top:4px;font-size:14px;color:var(--slate5)}
+  label.field{display:block} label.field span{font-size:12px;font-weight:600;color:var(--slate5)}
+  .inp{width:100%;margin-top:5px;border:1px solid var(--slate3);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;background:#fff}
+  .inp:focus{outline:0;border-color:var(--emerald)}
+  input[type=range]{accent-color:var(--emerald);width:100%}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  @media(min-width:960px){.metrics{grid-template-columns:repeat(5,1fr)}}
+  .metric{padding:16px;box-shadow:inset 0 0 0 1.5px transparent}
+  .metric .top{display:flex;justify-content:space-between;align-items:center}
+  .metric .val{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--slate9);margin-top:10px}
+  .metric .val small{font-size:13px;color:var(--slate5);font-weight:600}
+  .metric .lab{font-size:12px;color:var(--slate5)}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+  .dot{width:7px;height:7px;border-radius:999px}
+  .st-OPTIMAL{background:var(--emerald-l);color:var(--emerald-d)}.st-OPTIMAL .dot{background:var(--emerald)}
+  .st-WARNING{background:var(--amber-l);color:var(--amber)}.st-WARNING .dot{background:var(--amber)}
+  .st-CRITICAL{background:var(--red-l);color:var(--red)}.st-CRITICAL .dot{background:var(--red)}
+  .metric.ring-OPTIMAL{box-shadow:inset 0 0 0 1.5px #6ee7b7}
+  .metric.ring-WARNING{box-shadow:inset 0 0 0 1.5px #fcd34d}
+  .metric.ring-CRITICAL{box-shadow:inset 0 0 0 1.5px #fca5a5}
+  .toggles{grid-template-columns:1fr}
+  @media(min-width:640px){.toggles{grid-template-columns:1fr 1fr}}
+  .toggle{display:flex;align-items:center;justify-content:space-between;padding:16px}
+  .toggle .left{display:flex;align-items:center;gap:12px}
+  .toggle .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--slate1);color:var(--slate5)}
+  .toggle.on .ic{background:var(--emerald);color:#fff}
+  .sw{position:relative;width:48px;height:28px;border-radius:999px;background:var(--slate3);border:0;cursor:pointer;transition:.2s}
+  .sw.on{background:var(--emerald)}
+  .sw::after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:999px;background:#fff;transition:.2s}
+  .sw.on::after{left:24px}
+  .split{display:grid;gap:20px} @media(min-width:820px){.split{grid-template-columns:3fr 2fr}}
+  .result{font-family:var(--mono);font-size:30px;font-weight:800;color:var(--slate9)}
+  .bar-track{height:8px;border-radius:999px;background:var(--slate1);margin-top:3px;overflow:hidden}
+  .bar-fill{height:8px;border-radius:999px;background:var(--emerald)}
+  .between{display:flex;justify-content:space-between;font-size:14px}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--emerald-d)}
+  .live .dot{width:8px;height:8px;background:var(--emerald);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .note{font-size:11px;color:var(--slate5);margin-top:12px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--slate9);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:50;pointer-events:none}
+  .toast.show{opacity:1}
+  footer{border-top:1px solid var(--slate1);text-align:center;padding:22px;font-size:12px;color:var(--slate5);margin-top:30px}
+  svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg></div>
+      <div><b>SocioTernak</b><small>smart livestock</small></div>
+      <span id="modeBadge" class="mode demo">demo</span>
+      <button id="signOutBtn" class="btn btn-ghost btn-sm" style="display:none;margin-left:4px" onclick="signOut()">Keluar</button>
+    </div>
+    <nav id="nav">
+      <button class="tab active" data-t="beranda"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Beranda</button>
+      <button class="tab" data-t="iot"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>Dashboard IoT</button>
+      <button class="tab" data-t="genetika"><svg viewBox="0 0 24 24"><path d="M2 15c6.7-3 10.3-3 20-9M2 9c9.7 6 13.3 6 20 3"/></svg>Genetika</button>
+      <button class="tab" data-t="ternak"><svg viewBox="0 0 24 24"><path d="M8 3v3M16 3v3M5 6h14l-1 4a6 6 0 0 1-12 0z"/><path d="M6 10a3 3 0 0 1-3 3M18 10a3 3 0 0 0 3 3M9 16v3M15 16v3"/></svg>Ternak</button>
+      <button class="tab" data-t="pakan"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.6 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 6H5"/></svg>Pakan</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ============ BERANDA ============ -->
+  <section class="page show" id="beranda">
+    <div class="hero">
+      <div>
+        <span class="pill">IoT · Genetika · Marketplace Pakan</span>
+        <h1 style="margin-top:14px">Kelola <em style="color:var(--emerald);font-style:normal">close house</em> Anda seperti ruang kendali.</h1>
+        <p class="muted" style="margin-top:14px;max-width:440px">Pantau iklim real-time, analitik pemuliaan presisi, dan formulasi pakan biaya-terendah — satu platform, dibuat untuk smartphone peternak.</p>
+        <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="go('iot')">Buka demo langsung <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+          <button class="btn btn-ghost">Jadwalkan onboarding</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="mono" style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--slate5)">house · A-01</span>
+          <span class="live"><span class="dot"></span>live</span>
+        </div>
+        <div style="position:relative;height:104px"><canvas id="heroChart"></canvas></div>
+        <div class="kv">
+          <div><div class="n" id="hv-t">31.2°C</div><div class="l">suhu</div></div>
+          <div><div class="n" id="hv-h">64%</div><div class="l">lembap</div></div>
+          <div><div class="n" id="hv-a">27ppm</div><div class="l">NH₃</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid features">
+      <div class="card feat"><div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg></div><h3>IoT Smart Farming</h3><p>Telemetri iklim, amonia, air & pakan real-time dengan kontrol kipas / cooling-pad otomatis.</p></div>
+      <div class="card feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M2 15c6.7-3 10.3-3 20-9M2 9c9.7 6 13.3 6 20 3"/></svg></div><h3>Precision Breeding</h3><p>Pelacakan silsilah, estimasi breeding value, dan alert risiko inbreeding otomatis.</p></div>
+      <div class="card feat"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.6 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 6H5"/></svg></div><h3>Marketplace Pakan</h3><p>Suplai pakan langsung plus formulator least-cost untuk capai target protein lebih murah.</p></div>
+    </div>
+    <div class="card" style="margin-top:24px;border-color:#a7f3d0">
+      <h3 style="margin-bottom:14px">Estimator Efisiensi & ROI</h3>
+      <div class="split">
+        <div class="row2">
+          <label class="field"><span>Jumlah populasi (ekor)</span><input class="inp mono" type="number" id="r-pop" value="5000" step="100"></label>
+          <label class="field"><span>Penurunan mortalitas (poin %)</span><input class="inp mono" type="number" id="r-mort" value="1.5" step="0.1"></label>
+          <label class="field"><span>Perbaikan FCR (poin)</span><input class="inp mono" type="number" id="r-fcr" value="0.05" step="0.01"></label>
+          <label class="field"><span>Harga pakan (Rp/kg)</span><input class="inp mono" type="number" id="r-feed" value="8500" step="100"></label>
+          <label class="field"><span>Nilai per ekor (Rp)</span><input class="inp mono" type="number" id="r-bird" value="35000" step="500"></label>
+        </div>
+        <div style="background:var(--emerald);color:#fff;border-radius:14px;padding:20px;display:flex;flex-direction:column;justify-content:center">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;opacity:.85">estimasi keuntungan / siklus</div>
+          <div class="mono" id="r-total" style="font-size:30px;font-weight:800;margin-top:4px">Rp 0</div>
+          <div id="r-sub" style="font-size:12px;opacity:.9;margin-top:6px"></div>
+        </div>
+      </div>
+      <p class="note">Hanya estimasi — angka default adalah contoh, bukan patokan. Ganti dengan data siklus Anda sendiri sebelum dijadikan acuan.</p>
+    </div>
+  </section>
+
+  <!-- ============ IOT ============ -->
+  <section class="page" id="iot">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;gap:12px;flex-wrap:wrap">
+      <div><h2>Close House · A-01</h2><p class="muted" style="font-size:14px" id="iotSub">Telemetri lingkungan (simulasi)</p></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="live"><span class="dot"></span><span id="iotLive">simulasi live</span></span>
+        <button class="btn btn-ghost btn-sm" onclick="sendTestReading()">Kirim data uji</button>
+      </div>
+    </div>
+    <div class="grid metrics" id="metricGrid"></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin-bottom:10px">Tren Iklim (12 Titik Terakhir)</h3><div style="position:relative;height:150px"><canvas id="iotChart"></canvas></div></div>
+    <div class="grid toggles" style="margin-top:16px">
+      <div class="card toggle" id="tg-fan"><div class="left"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 12v.01M4.5 10.5c1.5-3 3-4.5 4.5-4.5 2 0 3 1.5 3 3M19.5 13.5c-1.5 3-3 4.5-4.5 4.5-2 0-3-1.5-3-3M13.5 4.5c3 1.5 4.5 3 4.5 4.5 0 2-1.5 3-3 3M10.5 19.5c-3-1.5-4.5-3-4.5-4.5 0-2 1.5-3 3-3"/></svg></div><div><h3>Exhaust Fan</h3><p class="muted" style="font-size:13px">Override manual</p></div></div><button class="sw" aria-label="Nyalakan atau matikan Exhaust Fan" onclick="tog(this,'tg-fan')"></button></div>
+      <div class="card toggle" id="tg-pad"><div class="left"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M4.9 4.9l14.2 14.2M2 12h20M4.9 19.1L19.1 4.9"/></svg></div><div><h3>Cooling Pad</h3><p class="muted" style="font-size:13px">Picu pendinginan evaporatif</p></div></div><button class="sw" aria-label="Nyalakan atau matikan Cooling Pad" onclick="tog(this,'tg-pad')"></button></div>
+    </div>
+  </section>
+
+  <!-- ============ GENETIKA ============ -->
+  <section class="page" id="genetika">
+    <div class="split">
+      <div>
+        <h2>Catat Pasangan Kawin</h2>
+        <div class="card" style="margin-top:14px">
+          <div class="row2">
+            <label class="field"><span>Pejantan (sire)</span><input class="inp" id="g-sire" value="PJ-114"></label>
+            <label class="field"><span>Induk (dam)</span><input class="inp" id="g-dam" value="BT-207"></label>
+            <label class="field"><span>Generasi</span><input class="inp mono" type="number" id="g-gen" value="4"></label>
+            <label class="field"><span>Heritabilitas (h²): <b id="g-h2v" class="mono">0.35</b></span><input type="range" min="0" max="1" step="0.01" value="0.35" id="g-h2"></label>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:var(--slate7)"><input type="checkbox" id="g-rel" checked style="width:16px;height:16px;accent-color:var(--emerald)">Pejantan & induk punya leluhur bersama</label>
+          <div class="row2" id="g-relbox" style="margin-top:12px">
+            <label class="field"><span>Generasi: sire → leluhur</span><input class="inp mono" type="number" min="1" id="g-gs" value="2"></label>
+            <label class="field"><span>Generasi: dam → leluhur</span><input class="inp mono" type="number" min="1" id="g-gd" value="2"></label>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3>Dari database ternak</h3><span id="dbBadge" class="mode demo">demo</span>
+          </div>
+          <p class="muted" style="font-size:13px;margin-top:4px" id="dbHint">Hubungkan Supabase untuk memuat ternak nyata & hitung F dari silsilah sebenarnya.</p>
+          <div id="dbForm" style="display:none;margin-top:12px">
+            <div class="row2">
+              <label class="field"><span>Pejantan</span><select class="inp" id="db-sire"></select></label>
+              <label class="field"><span>Induk</span><select class="inp" id="db-dam"></select></label>
+            </div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div>F proyeksi keturunan: <b class="mono" id="db-F" style="color:var(--slate9)">–</b></div>
+              <button class="btn btn-primary btn-sm" onclick="saveBreeding()">Simpan pasangan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" id="g-result">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--slate5)">Koefisien Inbreeding</div>
+          <div class="mono" id="g-F" style="font-size:40px;font-weight:800;color:var(--slate9)">0.00<span style="font-size:18px;color:var(--slate5)">%</span></div>
+          <div id="g-badge" class="badge st-OPTIMAL" style="margin-top:10px;font-size:13px;padding:6px 12px">Aman</div>
+          <div style="margin-top:18px;font-size:14px">
+            <div class="between"><span class="muted">Pasangan</span><b id="g-pair">PJ-114 × BT-207</b></div>
+            <div class="between" style="margin-top:6px"><span class="muted">Generasi</span><b class="mono" id="g-genl">F4</b></div>
+          </div>
+          <p class="note">F memakai metode jalur Wright yang disederhanakan (form manual) atau koansestri rekursif penuh (dari database). Ambang 6,25% / 12,5% adalah rule of thumb umum — sesuaikan dengan standar spesies Anda.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TERNAK (CRUD) ============ -->
+  <section class="page" id="ternak">
+    <h2>Manajemen Ternak</h2>
+    <p class="muted" style="font-size:14px;margin-top:4px">Tambah, ubah, atau hapus ternak. Silsilah di sini dipakai untuk menghitung inbreeding di tab Genetika.</p>
+    <div class="split" style="margin-top:14px">
+      <div class="card">
+        <h3 style="margin-bottom:12px">Tambah / ubah ternak</h3>
+        <div class="row2">
+          <label class="field"><span>Tag / ID</span><input class="inp" id="an-tag" placeholder="mis. PJ-115"></label>
+          <label class="field"><span>Jenis kelamin</span><select class="inp" id="an-sex"><option value="MALE">Jantan</option><option value="FEMALE">Betina</option></select></label>
+          <label class="field"><span>Generasi</span><input class="inp mono" type="number" id="an-gen" value="0" min="0"></label>
+          <div></div>
+          <label class="field"><span>Pejantan (sire)</span><select class="inp" id="an-sire"></select></label>
+          <label class="field"><span>Induk (dam)</span><select class="inp" id="an-dam"></select></label>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-primary btn-sm" id="an-submit" onclick="submitAnimal()">Tambah ternak</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearAnimalForm()">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:8px">Daftar ternak</h3>
+        <div id="animalTable"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAKAN ============ -->
+  <section class="page" id="pakan">
+    <div class="split">
+      <div>
+        <h2>Formulator Pakan Least-Cost</h2>
+        <p class="muted" style="font-size:14px;margin-top:4px">Campuran termurah dari 3 bahan yang mencapai target protein kasar.</p>
+        <div class="card" style="margin-top:14px">
+          <div style="display:grid;grid-template-columns:5fr 3fr 4fr;gap:8px;font-size:11px;text-transform:uppercase;color:var(--slate5);padding:0 2px 4px"><span>Bahan</span><span>PK %</span><span>Rp / kg</span></div>
+          <div id="feedRows"></div>
+          <label class="field" style="margin-top:12px"><span>Target protein kasar: <b id="f-tv" class="mono">19</b>%</span><input type="range" min="8" max="44" step="0.5" value="19" id="f-target"></label>
+        </div>
+        <p class="note">Estimator satu-nutrien (PK) saja. Formulasi nyata menyeimbangkan energi, asam amino, Ca & P sekaligus — anggap ini langkah awal.</p>
+      </div>
+      <div>
+        <div class="card" id="feedResult">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--emerald-d);font-weight:700">Campuran optimal</div>
+          <div class="result" id="f-cost" style="margin-top:8px">Rp 0 <span style="font-size:14px;color:var(--slate5)">/ kg</span></div>
+          <div class="muted" style="font-size:12px" id="f-cp">PK tercapai 0%</div>
+          <div id="f-bars" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Beli Bahan Pakan</h3><span id="mkBadge" class="mode demo">demo</span>
+      </div>
+      <p class="muted" style="font-size:13px;margin-top:4px" id="mkHint">Mode demo: pesanan tidak tersimpan. Hubungkan Supabase agar order tercatat di database.</p>
+      <div id="adminProduct" style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--slate3)">
+        <div style="font-size:12px;font-weight:700;color:var(--slate5);margin-bottom:8px">Tambah produk (admin/supplier)</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px">
+          <input class="inp" id="ap-name" placeholder="Nama"><input class="inp mono" id="ap-cp" type="number" placeholder="PK%"><input class="inp mono" id="ap-price" type="number" placeholder="Rp/kg"><input class="inp mono" id="ap-min" type="number" placeholder="min"><button class="btn btn-primary btn-sm" onclick="addProduct()">+</button>
+        </div>
+      </div>
+      <div id="productRows" style="margin-top:12px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px">
+        <div>Subtotal: <b class="mono" id="mk-subtotal" style="color:var(--slate9)">Rp 0</b></div>
+        <button class="btn btn-primary btn-sm" onclick="createOrder()">Buat Pesanan</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="authScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:40;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:380px;width:100%">
+    <div class="logo" style="justify-content:center;margin-bottom:10px">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg></div>
+      <div><b>SocioTernak</b><small>smart livestock</small></div>
+    </div>
+    <h3 style="text-align:center">Masuk ke akun Anda</h3>
+    <p class="muted" style="text-align:center;font-size:13px;margin:2px 0 16px">Kelola peternakan Anda dengan aman</p>
+    <label class="field"><span>Email</span><input class="inp" id="auth-email" type="email" autocomplete="email"></label>
+    <label class="field" style="margin-top:10px"><span>Password</span><input class="inp" id="auth-pass" type="password" autocomplete="current-password"></label>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="signIn()">Masuk</button>
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="signUp()">Daftar</button>
+    </div>
+    <p style="text-align:center;margin-top:10px"><a onclick="resetPass()" style="color:var(--emerald-d);font-size:13px;cursor:pointer;text-decoration:underline">Lupa password?</a></p>
+    <p class="note" id="auth-msg" style="text-align:center;min-height:16px"></p>
+  </div>
+</div>
+<footer>SocioTernak · data contoh bersifat ilustratif — kalibrasi ambang & harga sesuai operasi Anda.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+// KONFIGURASI — isi dua baris ini untuk mode LIVE (Supabase).
+// Kosongkan => mode DEMO (data simulasi, situs tetap berfungsi penuh).
+// ============================================================================
+const SUPABASE_URL = "";        // contoh: "https://xxxx.supabase.co"
+const SUPABASE_ANON_KEY = "";   // anon public key: Settings → API
+const MIDTRANS_CLIENT_KEY = ""; // opsional: isi untuk mengaktifkan pembayaran (lihat PAYMENTS.md)
+
+const HAS_SB = typeof window.supabase !== "undefined";
+const LIVE = !!(SUPABASE_URL && SUPABASE_ANON_KEY && HAS_SB);
+let sb = LIVE ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+if(MIDTRANS_CLIENT_KEY){const sc=document.createElement("script");sc.src="https://app.sandbox.midtrans.com/snap/snap.js";sc.setAttribute("data-client-key",MIDTRANS_CLIENT_KEY);document.head.appendChild(sc);}
+
+const $ = (id) => document.getElementById(id);
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2600); }
+function setModeUI(){
+  const cls = LIVE ? "live" : "demo", lbl = LIVE ? "live" : "demo";
+  ["modeBadge","dbBadge","mkBadge"].forEach(id=>{ const e=$(id); e.className="mode "+cls; e.textContent=lbl; });
+  if(LIVE){ $("iotSub").textContent="Telemetri lingkungan langsung (Supabase)"; $("iotLive").textContent="live"; }
+}
+setModeUI();
+
+// ---------- navigasi ----------
+function go(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("show",p.id===id));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.t===id));
+  if(id==="iot" && !iotChart) initIotChart();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("nav").addEventListener("click",e=>{const b=e.target.closest(".tab"); if(b) go(b.dataset.t);});
+
+// ---------- data awal ----------
+const H24 = Array.from({length:24},(_,h)=>{
+  const t=27+4*Math.sin(((h-6)/24)*Math.PI*2)+(h>12&&h<16?1.5:0);
+  const rh=68-10*Math.sin(((h-6)/24)*Math.PI*2);
+  return {h:String(h).padStart(2,"0")+":00",suhu:+t.toFixed(1),lembap:+rh.toFixed(0)};
+});
+const H12=H24.filter((_,i)=>i%2===0); // 12 titik — grafik ringkas
+new Chart($("heroChart"),{type:"line",data:{labels:H12.map(d=>d.h),datasets:[{data:H12.map(d=>d.suhu),borderColor:"#059669",backgroundColor:"rgba(5,150,105,.12)",fill:true,tension:.4,pointRadius:0,borderWidth:2}]},options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}},responsive:true,maintainAspectRatio:false}});
+
+// ---------- metrik ----------
+const rules={temp:{opt:[26,30],crit:34,unit:"°C"},hum:{opt:[50,70],crit:85,unit:"%"},nh3:{opt:[0,20],crit:25,unit:"ppm"},water:{opt:[2,10],unit:"L/min"},feed:{opt:[20,100],unit:"%"}};
+const typeToKey={TEMPERATURE:"temp",HUMIDITY:"hum",AMMONIA:"nh3",WATER_FLOW:"water",FEED_LEVEL:"feed"};
+let metrics=[
+  {k:"temp",lab:"Suhu",v:31.2,ic:'<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>'},
+  {k:"hum",lab:"Kelembapan",v:64,ic:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 2 12 2 9 5 7 8s-2 4-2 7a7 7 0 0 0 7 7z"/>'},
+  {k:"nh3",lab:"Amonia",v:27,ic:'<path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2"/>'},
+  {k:"water",lab:"Aliran air",v:4.8,ic:'<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1"/>'},
+  {k:"feed",lab:"Stok pakan",v:38,ic:'<path d="M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'}
+];
+function statusOf(k,v){const r=rules[k];if(!r)return"OPTIMAL";if(r.crit!==undefined&&v>r.crit)return"CRITICAL";if(v>=r.opt[0]&&v<=r.opt[1])return"OPTIMAL";return"WARNING";}
+const stLabel={OPTIMAL:"Optimal",WARNING:"Warning",CRITICAL:"Kritis"};
+function renderMetrics(){
+  $("metricGrid").innerHTML=metrics.map(m=>{const has=m.v!=null;const s=has?statusOf(m.k,m.v):"WARNING";const r=rules[m.k];const disp=has?m.v:"–";const lab=has?stLabel[s]:"Menunggu";
+    return `<div class="card metric ring-${s}"><div class="top"><svg viewBox="0 0 24 24" style="color:var(--slate5)">${m.ic}</svg><span class="badge st-${s}"><span class="dot"></span>${lab}</span></div><div class="val">${disp}<small> ${r.unit}</small></div><div class="lab">${m.lab}</div></div>`;
+  }).join("");
+  hv("hv-t",metrics[0].v!=null?metrics[0].v+"°C":"–"); hv("hv-h",metrics[1].v!=null?metrics[1].v+"%":"–"); hv("hv-a",metrics[2].v!=null?metrics[2].v+"ppm":"–");
+}
+const hv=(id,t)=>{const e=$(id);if(e)e.textContent=t;};
+renderMetrics();
+
+// ---------- iot chart ----------
+let iotChart=null, chartTemp=H12.map(d=>d.suhu), chartHum=H12.map(d=>d.lembap), chartLabels=H12.map(d=>d.h);
+function initIotChart(){
+  iotChart=new Chart($("iotChart"),{type:"line",data:{labels:chartLabels,datasets:[
+    {label:"Suhu (°C)",data:chartTemp,borderColor:"#059669",backgroundColor:"rgba(5,150,105,.12)",fill:true,tension:.4,pointRadius:0,borderWidth:2},
+    {label:"Kelembapan (%)",data:chartHum,borderColor:"#0ea5e9",backgroundColor:"rgba(14,165,233,.10)",fill:true,tension:.4,pointRadius:0,borderWidth:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false},plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:11}}}},scales:{x:{ticks:{maxTicksLimit:6,color:"#94a3b8",font:{size:10}}},y:{ticks:{color:"#94a3b8",font:{size:10}}}}}});
+}
+function pushChart(temp,hum,label){
+  chartTemp.push(temp);chartTemp.shift();chartHum.push(hum);chartHum.shift();chartLabels.push(label);chartLabels.shift();
+  if(iotChart)iotChart.update("none");
+}
+
+// ---------- toggles ----------
+function tog(btn,card){btn.classList.toggle("on");$(card).classList.toggle("on",btn.classList.contains("on"));}
+
+// ---------- ROI ----------
+["r-pop","r-mort","r-fcr","r-feed","r-bird"].forEach(id=>$(id).addEventListener("input",roi));
+function roi(){const g=id=>parseFloat($(id).value)||0;const pop=g("r-pop"),mort=g("r-mort"),fcr=g("r-fcr"),feed=g("r-feed"),bird=g("r-bird");
+  const birdsSaved=pop*(mort/100),feedSaved=pop*1.8*fcr,total=birdsSaved*bird+feedSaved*feed;
+  $("r-total").textContent="Rp "+Math.round(total).toLocaleString("id-ID");
+  $("r-sub").textContent="≈ "+Math.round(birdsSaved).toLocaleString("id-ID")+" ekor terselamatkan · "+Math.round(feedSaved).toLocaleString("id-ID")+" kg pakan hemat";}
+roi();
+
+// ---------- genetika: form manual (metode jalur) ----------
+function inbreedFromPath(gs,gd){if(gs<=0||gd<=0)return 0;return Math.pow(0.5,gs+gd+1);}
+function classify(F){if(F<0.0625)return["OPTIMAL","Aman"];if(F<0.125)return["WARNING","Risiko sedang"];return["CRITICAL","Risiko inbreeding tinggi"];}
+function showF(F,pairText,genText){
+  const [st,label]=classify(F);
+  $("g-F").innerHTML=(F*100).toFixed(2)+'<span style="font-size:18px;color:var(--slate5)">%</span>';
+  const b=$("g-badge");b.className="badge st-"+st;b.style.padding="6px 12px";b.style.fontSize="13px";b.textContent=label;
+  if(pairText)$("g-pair").textContent=pairText; if(genText)$("g-genl").textContent=genText;
+}
+function gene(){
+  const rel=$("g-rel").checked; $("g-relbox").style.display=rel?"grid":"none";
+  const F=rel?inbreedFromPath(+$("g-gs").value,+$("g-gd").value):0;
+  showF(F,$("g-sire").value+" × "+$("g-dam").value,"F"+$("g-gen").value);
+  $("g-h2v").textContent=(+$("g-h2").value).toFixed(2);
+}
+["g-sire","g-dam","g-gen","g-h2","g-rel","g-gs","g-gd"].forEach(id=>{const el=$(id);el.addEventListener("input",gene);el.addEventListener("change",gene);});
+gene();
+
+// ---------- genetika: koansestri rekursif (dari database) ----------
+function coancestry(aId,bId,ped,memo){
+  if(!aId||!bId)return 0;
+  const k=aId<bId?aId+"|"+bId:bId+"|"+aId; if(memo.has(k))return memo.get(k);
+  const A=ped.get(aId),B=ped.get(bId); let res;
+  if(aId===bId){const F=A?coancestry(A.sire_id,A.dam_id,ped,memo):0;res=0.5*(1+F);}
+  else{const expandA=!B||(A?A.generation>=B.generation:false);
+    if(expandA&&A)res=0.5*(coancestry(A.sire_id,bId,ped,memo)+coancestry(A.dam_id,bId,ped,memo));
+    else if(B)res=0.5*(coancestry(aId,B.sire_id,ped,memo)+coancestry(aId,B.dam_id,ped,memo));
+    else res=0;}
+  memo.set(k,res);return res;
+}
+const offspringF=(s,d,ped)=>coancestry(s,d,ped,new Map());
+let pedMap=new Map();
+let animalList=[]; // {id,tag_id,sex,generation,sire_id,dam_id}
+let editingAnimal=null;
+function rebuildPed(){
+  pedMap=new Map(animalList.map(a=>[a.id,a]));
+  const df=$("dbForm"); if(df) df.style.display="block";
+  refreshAnimalSelects(); renderAnimalTable(); computeDbF();
+}
+function refreshAnimalSelects(){
+  const opts=animalList.map(a=>`<option value="${a.id}">${esc(a.tag_id)}</option>`).join("");
+  ["db-sire","db-dam"].forEach(id=>{const el=$(id);if(!el)return;const v=el.value;el.innerHTML=opts;if(v)el.value=v;});
+  ["an-sire","an-dam"].forEach(id=>{const el=$(id);if(!el)return;const v=el.value;el.innerHTML='<option value="">— tidak diketahui —</option>'+opts;el.value=v;});
+  const dd=$("db-dam"); if(dd && !dd.value && animalList.length>1) dd.selectedIndex=1;
+}
+function renderAnimalTable(){
+  const box=$("animalTable"); if(!box)return;
+  if(!animalList.length){box.innerHTML='<p class="muted" style="font-size:13px">Belum ada ternak.</p>';return;}
+  box.innerHTML=animalList.map(a=>{const sn=a.sire_id?((pedMap.get(a.sire_id)||{}).tag_id||"?"):"—";const dn=a.dam_id?((pedMap.get(a.dam_id)||{}).tag_id||"?"):"—";
+    return `<div style="display:grid;grid-template-columns:1.2fr 1fr 1.3fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--slate1);font-size:14px"><b style="color:var(--slate9)">${esc(a.tag_id)}</b><span class="muted" style="font-size:12px">${a.sex==="FEMALE"?"Betina":"Jantan"} · F${a.generation}</span><span class="muted" style="font-size:12px">${esc(sn)} × ${esc(dn)}</span><span style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="editAnimal('${a.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="deleteAnimal('${a.id}')">Hapus</button></span></div>`;
+  }).join("");
+}
+async function loadAnimals(){
+  if(LIVE){const {data}=await sb.from("animals").select("id,tag_id,sex,generation,sire_id,dam_id").order("generation");animalList=data||[];}
+  rebuildPed();
+}
+async function submitAnimal(){
+  const tag=$("an-tag").value.trim(); if(!tag){toast("Isi tag/ID ternak");return;}
+  const rec={tag_id:tag,sex:$("an-sex").value,generation:parseInt($("an-gen").value)||0,sire_id:$("an-sire").value||null,dam_id:$("an-dam").value||null};
+  if(LIVE){
+    try{
+      if(editingAnimal){const {error}=await sb.from("animals").update(rec).eq("id",editingAnimal);if(error)throw error;}
+      else{const {error}=await sb.from("animals").insert(Object.assign({},rec,{owner_id:currentUser.id}));if(error)throw error;}
+      await loadAnimals(); toast(editingAnimal?"Ternak diperbarui ✓":"Ternak ditambah ✓");
+    }catch(err){toast("Gagal: "+(err.message||err));return;}
+  }else{
+    if(editingAnimal){const a=animalList.find(x=>x.id===editingAnimal);if(a)Object.assign(a,rec);}
+    else animalList.push(Object.assign({id:"loc-"+Date.now()},rec));
+    rebuildPed(); toast(editingAnimal?"Ternak diperbarui (demo)":"Ternak ditambah (demo)");
+  }
+  clearAnimalForm();
+}
+function editAnimal(id){const a=pedMap.get(id);if(!a)return;editingAnimal=id;$("an-tag").value=a.tag_id;$("an-sex").value=a.sex||"MALE";$("an-gen").value=a.generation;refreshAnimalSelects();$("an-sire").value=a.sire_id||"";$("an-dam").value=a.dam_id||"";$("an-submit").textContent="Simpan perubahan";go("ternak");}
+function clearAnimalForm(){editingAnimal=null;$("an-tag").value="";$("an-gen").value="0";const s=$("an-sire"),d=$("an-dam");if(s)s.value="";if(d)d.value="";$("an-submit").textContent="Tambah ternak";}
+async function deleteAnimal(id){
+  if(LIVE){try{const {error}=await sb.from("animals").delete().eq("id",id);if(error)throw error;await loadAnimals();toast("Ternak dihapus ✓");}catch(err){toast("Gagal hapus (mungkin masih dipakai sebagai induk): "+(err.message||err));}}
+  else{animalList=animalList.filter(a=>a.id!==id);rebuildPed();toast("Ternak dihapus (demo)");}
+}
+function computeDbF(){
+  const s=$("db-sire").value,d=$("db-dam").value;
+  if(!s||!d){$("db-F").textContent="–";return;}
+  const F=offspringF(s,d,pedMap);
+  $("db-F").textContent=(F*100).toFixed(2)+"%";
+  const sName=(pedMap.get(s)||{}).tag_id||"?", dName=(pedMap.get(d)||{}).tag_id||"?";
+  showF(F,sName+" × "+dName,"—");
+}
+
+// ---------- pakan optimizer ----------
+let ings=[{name:"Jagung",cp:8.5,price:6000},{name:"Dedak padi",cp:12,price:3500},{name:"Bungkil kedelai",cp:44,price:11000}];
+function renderFeedRows(){$("feedRows").innerHTML=ings.map((x,i)=>`<div style="display:grid;grid-template-columns:5fr 3fr 4fr;gap:8px;margin-bottom:8px"><input class="inp" value="${x.name}" oninput="setIng(${i},'name',this.value)"><input class="inp mono" type="number" value="${x.cp}" oninput="setIng(${i},'cp',this.value)"><input class="inp mono" type="number" value="${x.price}" oninput="setIng(${i},'price',this.value)"></div>`).join("");}
+function setIng(i,f,v){ings[i][f]=f==="name"?v:(parseFloat(v)||0);feed();}
+function optimize(target,step=1,tol=0.3){let best=null;for(let a=0;a<=100;a+=step)for(let b=0;b<=100-a;b+=step){const p=[a,b,100-a-b];const cp=p.reduce((s,x,k)=>s+x*ings[k].cp,0)/100;if(Math.abs(cp-target)>tol)continue;const cost=p.reduce((s,x,k)=>s+x*ings[k].price,0)/100;if(!best||cost<best.cost)best={p,cp,cost};}return best;}
+function feed(){const target=+$("f-target").value;$("f-tv").textContent=target;const r=optimize(target);
+  if(r){$("f-cost").innerHTML="Rp "+Math.round(r.cost).toLocaleString("id-ID")+' <span style="font-size:14px;color:var(--slate5)">/ kg</span>';$("f-cp").textContent="PK tercapai "+r.cp.toFixed(1)+"%";$("f-bars").innerHTML=r.p.map((pct,i)=>`<div style="margin-bottom:12px"><div class="between"><span class="muted">${ings[i].name}</span><b class="mono">${pct.toFixed(1)}%</b></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`).join("");}
+  else{$("f-cost").textContent="—";$("f-cp").textContent="Tidak ada campuran yang mencapai target";$("f-bars").innerHTML='<div style="background:var(--amber-l);color:var(--amber);padding:12px;border-radius:10px;font-size:14px">Tidak ada campuran yang mencapai '+target+'% PK. Tambah bahan protein tinggi atau ubah target.</div>';}}
+$("f-target").addEventListener("input",feed); renderFeedRows(); feed();
+
+// ---------- marketplace ----------
+let products=[{id:"demo-1",name:"Jagung",unit:"kg",price_per_unit:6000,min_order_qty:50},{id:"demo-2",name:"Dedak padi",unit:"kg",price_per_unit:3500,min_order_qty:50},{id:"demo-3",name:"Bungkil kedelai",unit:"kg",price_per_unit:11000,min_order_qty:25}];
+let cart={};
+function renderProducts(){
+  $("productRows").innerHTML=products.map(p=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--slate1)"><div><b style="color:var(--slate9)">${esc(p.name)}</b><div class="muted" style="font-size:12px">Rp ${Number(p.price_per_unit).toLocaleString("id-ID")}/${esc(p.unit)} · min ${p.min_order_qty}</div></div><input class="inp mono" type="number" min="0" value="0" style="width:90px" oninput="setCart('${p.id}',this.value)"><span class="mono" id="lt-${p.id}" style="min-width:90px;text-align:right;color:var(--slate9)">Rp 0</span></div>`).join("");
+  recalcCart();
+}
+function setCart(id,v){cart[id]=parseFloat(v)||0;recalcCart();}
+function recalcCart(){let sub=0;products.forEach(p=>{const q=cart[p.id]||0,lt=q*Number(p.price_per_unit);sub+=lt;const e=$("lt-"+p.id);if(e)e.textContent="Rp "+lt.toLocaleString("id-ID");});$("mk-subtotal").textContent="Rp "+sub.toLocaleString("id-ID");return sub;}
+async function createOrder(){
+  const lines=products.map(p=>({p,q:cart[p.id]||0})).filter(l=>l.q>0);
+  if(!lines.length){toast("Isi jumlah minimal satu bahan dulu");return;}
+  const under=lines.filter(l=>l.q<Number(l.p.min_order_qty));
+  if(under.length){toast("Di bawah minimum: "+under.map(l=>l.p.name).join(", "));return;}
+  const subtotal=lines.reduce((s,l)=>s+l.q*Number(l.p.price_per_unit),0);
+  if(!LIVE){toast("Mode demo — pesanan Rp "+subtotal.toLocaleString("id-ID")+" tidak disimpan");return;}
+  // Utamakan RPC aman (harga dihitung ulang di server). Fallback ke insert langsung
+  // bila hardening (create_order) belum dipasang, agar situs tetap berfungsi.
+  const rpc=await sb.rpc("create_order",{items:lines.map(l=>({product_id:l.p.id,quantity:l.q}))});
+  if(!rpc.error){ cart={}; renderProducts();
+    if(MIDTRANS_CLIENT_KEY && rpc.data) await payWithMidtrans(rpc.data);
+    else toast("Pesanan tersimpan ✓ (harga dihitung server)");
+    return; }
+  const missing=(rpc.error.code==="PGRST202")||/create_order|function|does not exist/i.test(rpc.error.message||"");
+  if(!missing){ toast("Gagal: "+rpc.error.message); return; }
+  try{
+    const {data:order,error}=await sb.from("orders").insert({buyer_id:currentUser.id,subtotal,status:"PENDING"}).select().single();
+    if(error)throw error;
+    const items=lines.map(l=>({order_id:order.id,product_id:l.p.id,quantity:l.q,unit_price:Number(l.p.price_per_unit)}));
+    const {error:e2}=await sb.from("order_items").insert(items);
+    if(e2)throw e2;
+    toast("Pesanan tersimpan ✓ Rp "+subtotal.toLocaleString("id-ID"));
+    cart={};renderProducts();
+  }catch(err){toast("Gagal: "+(err.message||err));}
+}
+renderProducts();
+
+let currentRole="FARMER";
+["db-sire","db-dam"].forEach(id=>{const el=$(id);if(el)el.addEventListener("change",computeDbF);});
+function applyRoleUI(){const el=$("adminProduct");if(el)el.style.display=(currentRole==="ADMIN"||currentRole==="SUPPLIER")?"block":"none";}
+async function addProduct(){
+  const name=$("ap-name").value.trim(),cp=parseFloat($("ap-cp").value)||0,price=parseFloat($("ap-price").value)||0,min=parseFloat($("ap-min").value)||1;
+  if(!name){toast("Isi nama produk");return;}
+  if(!LIVE){toast("Mode demo — produk tidak disimpan");return;}
+  try{const {error}=await sb.from("products").insert({name,cp_percent:cp,price_per_unit:price,min_order_qty:min});if(error)throw error;
+    const {data:prods}=await sb.from("products").select("*").order("name");if(prods)products=prods;cart={};renderProducts();
+    $("ap-name").value="";$("ap-cp").value="";$("ap-price").value="";$("ap-min").value="";toast("Produk ditambah ✓");
+  }catch(err){toast("Gagal (butuh peran admin/supplier + hardening SQL): "+(err.message||err));}
+}
+async function resetPass(){
+  if(!sb){authMsg("Reset password butuh mode LIVE");return;}
+  const email=$("auth-email").value.trim();
+  if(!email){authMsg("Isi email dulu");return;}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href});
+  authMsg(error?error.message:"Link reset dikirim ke email. Cek inbox.");
+}
+async function payWithMidtrans(orderId){
+  try{
+    const {data,error}=await sb.functions.invoke("create-payment",{body:{order_id:orderId}});
+    if(error||!data||!data.token){toast("Pesanan tersimpan ✓ (pembayaran belum aktif)");return;}
+    if(window.snap){window.snap.pay(data.token,{
+      onSuccess:()=>toast("Pembayaran berhasil ✓"),
+      onPending:()=>toast("Menunggu pembayaran…"),
+      onError:()=>toast("Pembayaran gagal"),
+      onClose:()=>toast("Jendela pembayaran ditutup")
+    });}else if(data.redirect_url){window.open(data.redirect_url,"_blank");}
+  }catch(e){toast("Pesanan tersimpan ✓ (pembayaran belum aktif)");}
+}
+
+// ============================================================================
+// MODE LIVE — muat & tulis data nyata dari Supabase
+// ============================================================================
+async function initLive(){
+  if(liveInit)return; liveInit=true;
+  try{
+    metrics.forEach(m=>m.v=null); renderMetrics();
+    const {data:sensors}=await sb.from("sensors").select("*");
+    const idToKey={}; (sensors||[]).forEach(s=>{const key=typeToKey[s.type];if(key)idToKey[s.id]=key;});
+    const {data:logs}=await sb.from("sensor_logs").select("sensor_id,value,recorded_at").order("recorded_at",{ascending:true}).limit(500);
+    const tempSeries=[],humSeries=[],labels=[];
+    (logs||[]).forEach(l=>{const key=idToKey[l.sensor_id];if(!key)return;
+      const m=metrics.find(x=>x.k===key);if(m)m.v=(key==="hum"||key==="nh3")?Math.round(l.value):+(+l.value).toFixed(1);
+      if(key==="temp"){tempSeries.push(+(+l.value).toFixed(1));labels.push(new Date(l.recorded_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}));}
+      if(key==="hum")humSeries.push(Math.round(l.value));
+    });
+    chartTemp = tempSeries.length? tempSeries.slice(-12): [];
+    chartLabels = labels.length? labels.slice(-12): [];
+    chartHum = humSeries.length? humSeries.slice(-12): [];
+    renderMetrics();
+    if(iotChart){iotChart.data.labels=chartLabels;iotChart.data.datasets[0].data=chartTemp;iotChart.data.datasets[1].data=chartHum;iotChart.update("none");}
+
+    sb.channel("logs").on("postgres_changes",{event:"INSERT",schema:"public",table:"sensor_logs"},(payload)=>{
+      const row=payload.new,key=idToKey[row.sensor_id];if(!key)return;
+      const m=metrics.find(x=>x.k===key);if(m)m.v=(key==="hum"||key==="nh3")?Math.round(row.value):+(+row.value).toFixed(1);
+      renderMetrics();
+      if(key==="temp")pushChart(+(+row.value).toFixed(1),metrics.find(x=>x.k==="hum").v,new Date(row.recorded_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}));
+    }).subscribe();
+
+    await loadAnimals();
+    $("dbHint").textContent="Data dari database Anda — F dihitung dari silsilah nyata (koansestri rekursif).";
+    try{const {data:prof}=await sb.from("profiles").select("role").eq("id",currentUser.id).single();currentRole=(prof&&prof.role)||"FARMER";}catch(e){currentRole="FARMER";}
+    applyRoleUI();
+
+    const {data:prods}=await sb.from("products").select("*").order("name");
+    if(prods&&prods.length){products=prods;cart={};renderProducts();}
+    $("mkHint").textContent="Mode live: pesanan akan tercatat di tabel orders & order_items.";
+  }catch(err){
+    toast("Gagal memuat Supabase: "+(err.message||err));
+    console.error(err);
+  }
+}
+
+let simTimer=null;
+function startSim(){
+  simTimer=setInterval(()=>{
+    const j=(x,d)=>+(x+(Math.random()-.5)*d).toFixed(1);
+    metrics[0].v=Math.max(24,Math.min(35,j(metrics[0].v,.6)));
+    metrics[1].v=Math.round(Math.max(45,Math.min(85,j(metrics[1].v,2))));
+    metrics[2].v=Math.round(Math.max(5,Math.min(30,j(metrics[2].v,1.5))));
+    metrics[3].v=Math.max(0,Math.min(10,j(metrics[3].v,.4)));
+    renderMetrics();
+    pushChart(metrics[0].v,metrics[1].v,new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}));
+  },4000);
+}
+async function sendTestReading(){
+  if(!LIVE){
+    metrics[0].v=+(metrics[0].v+(Math.random()*2-1)).toFixed(1);
+    metrics[2].v=Math.round(Math.max(5,Math.min(30,metrics[2].v+(Math.random()*3-1))));
+    renderMetrics();pushChart(metrics[0].v,metrics[1].v,new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}));
+    toast("Mode demo — data uji disimulasikan");return;
+  }
+  try{
+    const {data:sensors}=await sb.from("sensors").select("id,type");
+    const rnd={TEMPERATURE:28+Math.random()*6,HUMIDITY:55+Math.random()*20,AMMONIA:10+Math.random()*18,WATER_FLOW:3+Math.random()*5,FEED_LEVEL:30+Math.random()*40};
+    const rows=(sensors||[]).map(s=>({sensor_id:s.id,value:+((rnd[s.type]!==undefined?rnd[s.type]:0)).toFixed(1)}));
+    const {error}=await sb.from("sensor_logs").insert(rows);
+    if(error)throw error;
+    toast("Data uji terkirim ✓ (kartu ter-update via realtime)");
+  }catch(err){toast("Gagal kirim: "+(err.message||err));}
+}
+async function saveBreeding(){
+  if(!LIVE){toast("Hubungkan Supabase untuk menyimpan");return;}
+  const s=$("db-sire").value,d=$("db-dam").value;
+  if(!s||!d){toast("Pilih pejantan & induk");return;}
+  const F=offspringF(s,d,pedMap);
+  try{
+    const {error}=await sb.from("breeding_records").insert({owner_id:currentUser.id,sire_id:s,dam_id:d,inbreeding_f:F,heritability:+$("g-h2").value});
+    if(error)throw error;
+    toast("Pasangan tersimpan ✓ F="+(F*100).toFixed(2)+"%");
+  }catch(err){toast("Gagal: "+(err.message||err));}
+}
+
+// ---------- auth + boot ----------
+let currentUser=null, liveInit=false;
+function authMsg(m){$("auth-msg").textContent=m;}
+function showApp(show){
+  document.querySelector("main").style.display=show?"block":"none";
+  document.querySelector("header").style.display=show?"":"none";
+  $("authScreen").style.display=show?"none":"flex";
+  $("signOutBtn").style.display=(show&&LIVE)?"inline-flex":"none";
+}
+async function signIn(){
+  const email=$("auth-email").value.trim(),password=$("auth-pass").value;
+  if(!email||!password){authMsg("Isi email & password");return;}
+  authMsg("Memproses…");
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error)authMsg(error.message); // sukses ditangani onAuthStateChange
+}
+async function signUp(){
+  const email=$("auth-email").value.trim(),password=$("auth-pass").value;
+  if(!email||!password){authMsg("Isi email & password");return;}
+  authMsg("Membuat akun…");
+  const {data,error}=await sb.auth.signUp({email,password});
+  if(error){authMsg(error.message);return;}
+  if(data.session)authMsg("");                 // langsung masuk (konfirmasi email nonaktif)
+  else authMsg("Akun dibuat. Jika konfirmasi email aktif, cek inbox lalu klik Masuk.");
+}
+async function signOut(){ await sb.auth.signOut(); location.reload(); }
+
+if(LIVE){
+  showApp(false);
+  sb.auth.onAuthStateChange((evt,session)=>{
+    currentUser=session?session.user:null;
+    if(evt==="PASSWORD_RECOVERY"){
+      const np=prompt("Masukkan password baru:");
+      if(np) sb.auth.updateUser({password:np}).then(({error})=>toast(error?error.message:"Password diperbarui ✓"));
+    }
+    if(currentUser){ showApp(true); initLive(); } else { showApp(false); }
+  });
+}else{
+  animalList=[
+    {id:"a1",tag_id:"GA-01",sex:"MALE",generation:0,sire_id:null,dam_id:null},
+    {id:"a2",tag_id:"GA-02",sex:"FEMALE",generation:0,sire_id:null,dam_id:null},
+    {id:"a3",tag_id:"PJ-114",sex:"MALE",generation:2,sire_id:"a1",dam_id:"a2"},
+    {id:"a4",tag_id:"BT-207",sex:"FEMALE",generation:2,sire_id:"a1",dam_id:"a2"}
+  ];
+  rebuildPed();
+  showApp(true); startSim();
+  if(!HAS_SB) console.info("Supabase belum termuat/dikonfigurasi → mode DEMO.");
+}
+</script>
+</body>
+</html>
